@@ -1,0 +1,45 @@
+# ===== .NET 构建产物 =====
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+artifacts/
+publish/
+*.binlog
+*.tlog
+
+# ===== IDE 与用户配置 =====
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.DotSettings.user
+*.ncrunch*
+
+# ===== NuGet =====
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+
+# ===== 测试与诊断 =====
+[Tt]est[Rr]esult*/
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+*.trx
+*.dmp
+*.gcdump
+
+# ===== 运行时输出 =====
+*.log
+[Ll]ogs/
+
+# ===== 操作系统 =====
+.DS_Store
+Thumbs.db
+desktop.ini

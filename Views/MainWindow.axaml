@@ -1,0 +1,248 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:QrOffline.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="880" d:DesignHeight="620"
+        x:Class="QrOffline.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/app-icon.ico"
+        Width="880" Height="620"
+        MinWidth="820" MinHeight="560"
+        Title="离线二维码生成器">
+
+    <Window.Styles>
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="14" />
+        </Style>
+
+        <Style Selector="TextBlock.label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Margin" Value="2,0,0,4" />
+        </Style>
+
+        <Style Selector="TextBlock.hint">
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+        </Style>
+
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#FF4F46E5" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Padding" Value="14,9" />
+            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Button.primary /template/ ContentPresenter">
+            <Setter Property="Background" Value="#FF4F46E5" />
+            <Setter Property="TextElement.Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#FF4338CA" />
+            <Setter Property="TextElement.Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.primary:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#FF3730A3" />
+            <Setter Property="TextElement.Foreground" Value="White" />
+        </Style>
+
+        <Style Selector="Button.ghost">
+            <Setter Property="Padding" Value="14,9" />
+            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- 顶部标题栏 -->
+        <Border Grid.Row="0" Padding="20,13">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                    <GradientStop Offset="0" Color="#FF4F46E5" />
+                    <GradientStop Offset="0.55" Color="#FF7C3AED" />
+                    <GradientStop Offset="1" Color="#FF0EA5E9" />
+                </LinearGradientBrush>
+            </Border.Background>
+
+            <Grid ColumnDefinitions="Auto,*">
+                <Border Grid.Column="0" Width="40" Height="40" CornerRadius="11" Background="#33FFFFFF">
+                    <Canvas Width="20" Height="20">
+                        <Border Canvas.Left="0" Canvas.Top="0" Width="8" Height="8"
+                                BorderBrush="White" BorderThickness="2" CornerRadius="1.5" />
+                        <Border Canvas.Left="12" Canvas.Top="0" Width="8" Height="8"
+                                BorderBrush="White" BorderThickness="2" CornerRadius="1.5" />
+                        <Border Canvas.Left="0" Canvas.Top="12" Width="8" Height="8"
+                                BorderBrush="White" BorderThickness="2" CornerRadius="1.5" />
+                        <Border Canvas.Left="12" Canvas.Top="12" Width="8" Height="8"
+                                Background="White" CornerRadius="1.5" />
+                    </Canvas>
+                </Border>
+
+                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="离线二维码生成器" FontSize="19" FontWeight="Bold" Foreground="White" />
+                    <TextBlock Text="纯本地运算 · 无需联网 · 内容不外传"
+                               FontSize="12" Foreground="#E6FFFFFF" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 主体内容 -->
+        <Grid Grid.Row="1" ColumnDefinitions="400,*" Margin="12" ColumnSpacing="12">
+
+            <!-- 左侧：输入与参数 -->
+            <Border Grid.Column="0" Classes="card">
+                <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="10">
+
+                    <StackPanel Grid.Row="0" Spacing="2">
+                        <TextBlock Text="输入内容" FontSize="13.5" FontWeight="Bold" />
+                        <TextBlock Classes="hint" Text="支持文本、网址、联系方式等任意字符串，编辑时自动重新生成。" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <Grid Grid.Row="1" RowDefinitions="*,Auto" RowSpacing="4">
+                        <TextBox Grid.Row="0"
+                                 Text="{Binding InputText, Mode=TwoWay}"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 MinHeight="96"
+                                 Padding="10,9"
+                                 FontSize="13.5"
+                                 CornerRadius="10"
+                                 VerticalContentAlignment="Top"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 PlaceholderText="在此输入文本或链接，例如 https://example.com" />
+                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Classes="hint" Text="{Binding CharCount}" />
+                            <Button Grid.Column="1" Classes="hint" Padding="6,0" Background="Transparent" BorderThickness="0"
+                                    Content="填入示例" FontSize="11.5" Command="{Binding FillSampleCommand}" />
+                        </Grid>
+                    </Grid>
+
+                    <StackPanel Grid.Row="2" Spacing="10">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="label" Text="容错级别" />
+                            <ComboBox ItemsSource="{Binding EccOptions}"
+                                      SelectedItem="{Binding SelectedEcc}"
+                                      HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate DataType="vm:EccOption">
+                                        <StackPanel Spacing="1">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13" />
+                                            <TextBlock Text="{Binding Description}" Classes="hint" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <StackPanel Grid.Column="0" Spacing="4">
+                                <TextBlock Classes="label" Text="前景色" />
+                                <ComboBox ItemsSource="{Binding ForegroundOptions}"
+                                          SelectedItem="{Binding SelectedForeground}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate DataType="vm:ColorOption">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <Border Width="15" Height="15" CornerRadius="4" Background="{Binding Brush}"
+                                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" />
+                                                <TextBlock Text="{Binding Name}" FontSize="13" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Classes="label" Text="背景色" />
+                                <ComboBox ItemsSource="{Binding BackgroundOptions}"
+                                          SelectedItem="{Binding SelectedBackground}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate DataType="vm:ColorOption">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <Border Width="15" Height="15" CornerRadius="4" Background="{Binding Brush}"
+                                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" />
+                                                <TextBlock Text="{Binding Name}" FontSize="13" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
+                        <StackPanel Spacing="4">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0" Classes="label" Text="输出尺寸" />
+                                <TextBlock Grid.Column="1" Classes="label" Text="{Binding PixelSizeLabel}"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            </Grid>
+                            <Slider Minimum="180" Maximum="1200" TickFrequency="20" IsSnapToTickEnabled="True"
+                                    Value="{Binding PixelSize, Mode=TwoWay}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="3" Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Button Grid.Column="0" Classes="primary"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Content="生成二维码" Command="{Binding RegenerateCommand}" />
+                            <Button Grid.Column="1" Classes="ghost" Content="清空" Command="{Binding ClearCommand}" />
+                        </Grid>
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Foreground="{Binding StatusBrush}"
+                                   FontSize="12"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 右侧：预览 -->
+            <Border Grid.Column="1" Classes="card">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+
+                    <TextBlock Grid.Row="0" Text="预览" FontSize="13.5" FontWeight="Bold" />
+
+                    <Border Grid.Row="1" CornerRadius="10" Background="#FFFFFFFF"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                            Padding="10" BoxShadow="0 6 18 0 #1A000000">
+                        <Grid>
+                            <Image Source="{Binding QrImage}"
+                                   Stretch="Uniform"
+                                   MaxWidth="640" MaxHeight="640"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                            <StackPanel IsVisible="{Binding !HasQrImage}"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                                <Border Width="64" Height="64" CornerRadius="12"
+                                        BorderBrush="#FFD4D4D8" BorderThickness="2"
+                                        HorizontalAlignment="Center">
+                                    <TextBlock Text="QR" FontSize="18" FontWeight="Bold" Foreground="#FFA1A1AA"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="输入内容后即可生成二维码"
+                                           Foreground="#FF71717A" FontSize="12.5" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Button Grid.Column="0" Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                Content="复制图片" IsEnabled="{Binding HasQrImage}" Click="OnCopyImageClick" />
+                        <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                Content="保存 PNG" IsEnabled="{Binding HasQrImage}" Click="OnSavePngClick" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
