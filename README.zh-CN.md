@@ -90,3 +90,7 @@ QrImage = new Bitmap(stream);
 **位图回收时机。** 替换预览位图时，旧实例通过 `Dispatcher.UIThread.Post(..., DispatcherPriority.Background)` 延后一帧释放，避免渲染管线仍在使用时被提前销毁。
 
 **Avalonia 12 适配。** 剪贴板使用新的 `ClipboardExtensions.SetBitmapAsync`；`TextBox.Watermark` 已更名为 `PlaceholderText`；文件对话框统一走 `IStorageProvider`；编译绑定默认开启，XAML 中显式声明 `x:DataType`。
+
+## 许可证
+
+本项目基于 [MIT 许可证](./LICENSE) 发布。

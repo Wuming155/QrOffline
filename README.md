@@ -90,3 +90,7 @@ QrImage = new Bitmap(stream);
 **Bitmap lifetime.** When the preview image is replaced, the previous instance is disposed one frame later via `Dispatcher.UIThread.Post(..., DispatcherPriority.Background)`, so the render pipeline is never left holding a disposed bitmap.
 
 **Avalonia 12 adaptations.** Clipboard access goes through the new `ClipboardExtensions.SetBitmapAsync`; `TextBox.Watermark` is now `PlaceholderText`; file dialogs use `IStorageProvider`; compiled bindings are enabled by default, so `x:DataType` is declared explicitly in XAML.
+
+## License
+
+Released under the [MIT License](./LICENSE).
