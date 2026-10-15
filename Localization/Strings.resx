@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="AppTitle" xml:space="preserve">
+    <value>Offline QR Generator</value>
+  </data>
+  <data name="AppSubtitle" xml:space="preserve">
+    <value>Fully local · No network · Nothing leaves your machine</value>
+  </data>
+
+  <data name="InputHeader" xml:space="preserve">
+    <value>Content</value>
+  </data>
+  <data name="InputHint" xml:space="preserve">
+    <value>Any text, URL or contact details. The code is regenerated automatically as you edit.</value>
+  </data>
+  <data name="InputPlaceholder" xml:space="preserve">
+    <value>Type text or a link here, e.g. https://example.com</value>
+  </data>
+  <data name="FillSampleButton" xml:space="preserve">
+    <value>Fill sample</value>
+  </data>
+  <data name="EccLabel" xml:space="preserve">
+    <value>Error correction</value>
+  </data>
+  <data name="ForegroundLabel" xml:space="preserve">
+    <value>Foreground</value>
+  </data>
+  <data name="BackgroundLabel" xml:space="preserve">
+    <value>Background</value>
+  </data>
+  <data name="OutputSizeLabel" xml:space="preserve">
+    <value>Output size</value>
+  </data>
+  <data name="GenerateButton" xml:space="preserve">
+    <value>Generate</value>
+  </data>
+  <data name="ClearButton" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+
+  <data name="PreviewHeader" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="PreviewEmpty" xml:space="preserve">
+    <value>Enter content to generate a QR code</value>
+  </data>
+  <data name="CopyImageButton" xml:space="preserve">
+    <value>Copy image</value>
+  </data>
+  <data name="SavePngButton" xml:space="preserve">
+    <value>Save PNG</value>
+  </data>
+
+  <data name="EccLowName" xml:space="preserve">
+    <value>L · Low</value>
+  </data>
+  <data name="EccLowDescription" xml:space="preserve">
+    <value>~7% recovery, largest data capacity</value>
+  </data>
+  <data name="EccMediumName" xml:space="preserve">
+    <value>M · Medium</value>
+  </data>
+  <data name="EccMediumDescription" xml:space="preserve">
+    <value>~15% recovery, a good everyday default</value>
+  </data>
+  <data name="EccQuartileName" xml:space="preserve">
+    <value>Q · Quartile</value>
+  </data>
+  <data name="EccQuartileDescription" xml:space="preserve">
+    <value>~25% recovery, tolerates minor damage</value>
+  </data>
+  <data name="EccHighName" xml:space="preserve">
+    <value>H · High</value>
+  </data>
+  <data name="EccHighDescription" xml:space="preserve">
+    <value>~30% recovery, most robust, best for print</value>
+  </data>
+
+  <data name="ColorGraphite" xml:space="preserve">
+    <value>Graphite</value>
+  </data>
+  <data name="ColorIndigo" xml:space="preserve">
+    <value>Indigo</value>
+  </data>
+  <data name="ColorPine" xml:space="preserve">
+    <value>Pine</value>
+  </data>
+  <data name="ColorCarmine" xml:space="preserve">
+    <value>Carmine</value>
+  </data>
+  <data name="ColorCoffee" xml:space="preserve">
+    <value>Coffee</value>
+  </data>
+  <data name="ColorWhite" xml:space="preserve">
+    <value>White</value>
+  </data>
+  <data name="ColorCream" xml:space="preserve">
+    <value>Cream</value>
+  </data>
+  <data name="ColorLightGray" xml:space="preserve">
+    <value>Light gray</value>
+  </data>
+  <data name="ColorTransparent" xml:space="preserve">
+    <value>Transparent</value>
+  </data>
+
+  <data name="SampleText" xml:space="preserve">
+    <value>Offline QR generator · QrOffline · no network required</value>
+  </data>
+
+  <data name="StatusWaiting" xml:space="preserve">
+    <value>Waiting for content</value>
+  </data>
+  <data name="StatusReady" xml:space="preserve">
+    <value>Generated. You can copy it or save it as PNG.</value>
+  </data>
+  <data name="StatusTooLong" xml:space="preserve">
+    <value>Content is too long. Shorten the text or use a lower error-correction level.</value>
+  </data>
+  <data name="StatusGenerationFailed" xml:space="preserve">
+    <value>Generation failed: {0}</value>
+  </data>
+  <data name="StatusCopied" xml:space="preserve">
+    <value>QR image copied to the clipboard</value>
+  </data>
+  <data name="StatusCopyFailed" xml:space="preserve">
+    <value>Copy failed: {0}</value>
+  </data>
+  <data name="StatusSaved" xml:space="preserve">
+    <value>Saved: {0}</value>
+  </data>
+  <data name="StatusSaveFailed" xml:space="preserve">
+    <value>Save failed: {0}</value>
+  </data>
+  <data name="StatusNothingToSave" xml:space="preserve">
+    <value>There is no QR code to save.</value>
+  </data>
+
+  <data name="CharCountFormat" xml:space="preserve">
+    <value>{0} characters</value>
+  </data>
+  <data name="PixelSizeFormat" xml:space="preserve">
+    <value>{0} px</value>
+  </data>
+
+  <data name="SaveDialogTitle" xml:space="preserve">
+    <value>Save QR code</value>
+  </data>
+  <data name="PngFileTypeName" xml:space="preserve">
+    <value>PNG image</value>
+  </data>
+  <data name="SuggestedFileName" xml:space="preserve">
+    <value>qrcode.png</value>
+  </data>
+</root>

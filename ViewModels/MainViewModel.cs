@@ -1,11 +1,19 @@
 using System;
-using System.IO;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QRCoder;
+using QRCoder.Exceptions;
+using QrOffline.Localization;
+using QrOffline.Rendering;
 
 namespace QrOffline.ViewModels;
 
@@ -18,11 +26,26 @@ public sealed record ColorOption(string Name, Color Color)
     public IBrush Brush { get; } = new SolidColorBrush(Color);
 }
 
-public partial class MainViewModel : ViewModelBase
+public partial class MainViewModel : ViewModelBase, IDisposable
 {
+    // 缓存的画刷，避免每次绑定时重新分配。
+    private static readonly IBrush SuccessBrush = new SolidColorBrush(Color.Parse("#FF16A34A"));
+    private static readonly IBrush ErrorBrush = new SolidColorBrush(Color.Parse("#FFE5484D"));
+
     private readonly DispatcherTimer _debounceTimer;
+    private CancellationTokenSource? _generationCts;
     private Bitmap? _qrImage;
     private bool _ready;
+    private bool _suppressSchedule;
+    private bool _disposed;
+
+    // 最近一次成功生成的重编码参数，用于按需导出 PNG。
+    private bool _hasRender;
+    private string _renderText = string.Empty;
+    private QRCodeGenerator.ECCLevel _renderEcc;
+    private int _renderPixelsPerModule;
+    private byte[] _renderDark = [];
+    private byte[] _renderLight = [];
 
     public MainViewModel()
     {
@@ -30,32 +53,32 @@ public partial class MainViewModel : ViewModelBase
         _debounceTimer.Tick += (_, _) =>
         {
             _debounceTimer.Stop();
-            Generate();
+            _ = GenerateAsync();
         };
 
         EccOptions =
         [
-            new("L · 低", "约 7% 容错，可容纳数据最多", QRCodeGenerator.ECCLevel.L),
-            new("M · 中", "约 15% 容错，日常推荐", QRCodeGenerator.ECCLevel.M),
-            new("Q · 较高", "约 25% 容错，适合轻微污损场景", QRCodeGenerator.ECCLevel.Q),
-            new("H · 高", "约 30% 容错，最抗损，适合印刷", QRCodeGenerator.ECCLevel.H),
+            new(Strings.EccLowName, Strings.EccLowDescription, QRCodeGenerator.ECCLevel.L),
+            new(Strings.EccMediumName, Strings.EccMediumDescription, QRCodeGenerator.ECCLevel.M),
+            new(Strings.EccQuartileName, Strings.EccQuartileDescription, QRCodeGenerator.ECCLevel.Q),
+            new(Strings.EccHighName, Strings.EccHighDescription, QRCodeGenerator.ECCLevel.H),
         ];
 
         ForegroundOptions =
         [
-            new("石墨黑", Color.Parse("#FF111827")),
-            new("深靛蓝", Color.Parse("#FF4338CA")),
-            new("松墨绿", Color.Parse("#FF047857")),
-            new("胭脂红", Color.Parse("#FFBE123C")),
-            new("咖褐", Color.Parse("#FF78350F")),
+            new(Strings.ColorGraphite, Color.Parse("#FF111827")),
+            new(Strings.ColorIndigo, Color.Parse("#FF4338CA")),
+            new(Strings.ColorPine, Color.Parse("#FF047857")),
+            new(Strings.ColorCarmine, Color.Parse("#FFBE123C")),
+            new(Strings.ColorCoffee, Color.Parse("#FF78350F")),
         ];
 
         BackgroundOptions =
         [
-            new("纯白", Colors.White),
-            new("米白", Color.Parse("#FFFDF6E3")),
-            new("浅灰", Color.Parse("#FFF1F5F9")),
-            new("透明", Color.Parse("#00FFFFFF")),
+            new(Strings.ColorWhite, Colors.White),
+            new(Strings.ColorCream, Color.Parse("#FFFDF6E3")),
+            new(Strings.ColorLightGray, Color.Parse("#FFF1F5F9")),
+            new(Strings.ColorTransparent, Color.Parse("#00FFFFFF")),
         ];
 
         SelectedEcc = EccOptions[1];
@@ -63,7 +86,7 @@ public partial class MainViewModel : ViewModelBase
         SelectedBackground = BackgroundOptions[0];
 
         _ready = true;
-        Generate();
+        _ = GenerateAsync();
     }
 
     public EccOption[] EccOptions { get; }
@@ -94,7 +117,7 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>状态栏文字。</summary>
     [ObservableProperty]
-    public partial string StatusMessage { get; set; } = "等待输入内容";
+    public partial string StatusMessage { get; set; } = Strings.StatusWaiting;
 
     /// <summary>状态是否为错误（用于变色）。</summary>
     [ObservableProperty]
@@ -126,16 +149,11 @@ public partial class MainViewModel : ViewModelBase
 
     public bool HasQrImage => _qrImage is not null;
 
-    /// <summary>最近一次生成的 PNG 数据。</summary>
-    public byte[]? PngBytes { get; private set; }
+    public string CharCount => string.Format(CultureInfo.CurrentCulture, Strings.CharCountFormat, InputText?.Length ?? 0);
 
-    public string CharCount => $"{(InputText?.Length ?? 0)} 个字符";
+    public string PixelSizeLabel => string.Format(CultureInfo.CurrentCulture, Strings.PixelSizeFormat, (int)PixelSize);
 
-    public string PixelSizeLabel => $"{(int)PixelSize} px";
-
-    public IBrush StatusBrush => StatusIsError
-        ? new SolidColorBrush(Color.Parse("#FFE5484D"))
-        : new SolidColorBrush(Color.Parse("#FF16A34A"));
+    public IBrush StatusBrush => StatusIsError ? ErrorBrush : SuccessBrush;
 
     partial void OnInputTextChanged(string value)
     {
@@ -162,26 +180,35 @@ public partial class MainViewModel : ViewModelBase
     private void Regenerate()
     {
         _debounceTimer.Stop();
-        Generate();
+        _ = GenerateAsync();
     }
 
     /// <summary>按钮：填充一段示例文本。</summary>
     [RelayCommand]
-    private void FillSample() => InputText = "离线二维码生成器 · QrOffline · 无需联网";
+    private void FillSample() => InputText = Strings.SampleText;
 
     /// <summary>按钮：清空输入与预览。</summary>
     [RelayCommand]
     private void Clear()
     {
         _debounceTimer.Stop();
-        InputText = string.Empty;
-        Generate();
+        _suppressSchedule = true;
+        try
+        {
+            InputText = string.Empty;
+        }
+        finally
+        {
+            _suppressSchedule = false;
+        }
+
+        _ = GenerateAsync();
     }
 
     /// <summary>防抖：文本编辑时延迟生成，避免频繁重算。</summary>
     private void Schedule()
     {
-        if (!_ready)
+        if (!_ready || _suppressSchedule || _disposed)
         {
             return;
         }
@@ -190,55 +217,183 @@ public partial class MainViewModel : ViewModelBase
         _debounceTimer.Start();
     }
 
-    /// <summary>根据当前设置生成二维码位图与 PNG 数据。</summary>
-    public void Generate()
+    /// <summary>
+    /// 根据当前设置生成二维码位图。重活（编码 + 栅格化）在线程池上执行，
+    /// 只有写入 <see cref="QrImage"/> 回到 UI 线程；上一轮请求会被取消。
+    /// </summary>
+    private async Task GenerateAsync()
     {
-        var text = InputText ?? string.Empty;
-
-        if (text.Length == 0)
-        {
-            PngBytes = null;
-            QrImage = null;
-            StatusMessage = "等待输入内容";
-            StatusIsError = false;
-            return;
-        }
+        // 取消上一轮尚未完成的工作（此时它一定还未被释放）。
+        _generationCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _generationCts = cts;
 
         try
         {
-            var ecc = SelectedEcc?.Level ?? QRCodeGenerator.ECCLevel.M;
+            var text = InputText ?? string.Empty;
 
+            if (text.Length == 0)
+            {
+                _hasRender = false;
+                QrImage = null;
+                StatusMessage = Strings.StatusWaiting;
+                StatusIsError = false;
+                return;
+            }
+
+            var ecc = SelectedEcc?.Level ?? QRCodeGenerator.ECCLevel.M;
+            var targetSize = PixelSize;
+            var darkColor = SelectedForeground?.Color ?? Colors.Black;
+            var lightColor = SelectedBackground?.Color ?? Colors.White;
+
+            try
+            {
+                var render = await Task.Run(
+                    () => BuildRender(text, ecc, targetSize, darkColor, lightColor, cts.Token),
+                    cts.Token);
+
+                if (_disposed || cts.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                QrImage = CreateBitmap(render.Pixels, render.Size);
+
+                _renderText = text;
+                _renderEcc = ecc;
+                _renderPixelsPerModule = render.PixelsPerModule;
+                _renderDark = ToRgba(darkColor);
+                _renderLight = ToRgba(lightColor);
+                _hasRender = true;
+
+                StatusMessage = Strings.StatusReady;
+                StatusIsError = false;
+            }
+            catch (OperationCanceledException)
+            {
+                // 已被更新的一次生成取代，忽略。
+            }
+            catch (DataTooLongException)
+            {
+                ClearRender();
+                StatusIsError = true;
+                StatusMessage = Strings.StatusTooLong;
+            }
+            catch (Exception ex)
+            {
+                ClearRender();
+                StatusIsError = true;
+                StatusMessage = string.Format(CultureInfo.CurrentCulture, Strings.StatusGenerationFailed, ex.Message);
+            }
+        }
+        finally
+        {
+            // 只有仍是「当前」的请求才需要清空引用，避免误清掉新一轮的 cts。
+            if (ReferenceEquals(_generationCts, cts))
+            {
+                _generationCts = null;
+            }
+
+            cts.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// 按需把当前二维码编码为 PNG 字节（用于保存）。与预览共用同一套参数，
+    /// 因此只在真正导出时才付出 PNG 压缩的代价。
+    /// </summary>
+    public Task<byte[]?> EncodePngAsync()
+    {
+        if (!_hasRender)
+        {
+            return Task.FromResult<byte[]?>(null);
+        }
+
+        var text = _renderText;
+        var ecc = _renderEcc;
+        var pixelsPerModule = _renderPixelsPerModule;
+        var dark = _renderDark;
+        var light = _renderLight;
+
+        return Task.Run<byte[]?>(() =>
+        {
             using var generator = new QRCodeGenerator();
             using var data = generator.CreateQrCode(text, ecc, forceUtf8: true, utf8BOM: false);
+            using var png = new PngByteQRCode(data);
+            return png.GetGraphic(pixelsPerModule, dark, light, drawQuietZones: true);
+        });
+    }
 
-            // ModuleMatrix 已包含 4 个模块宽的静默区，保证扫码器可识别。
-            var modules = data.ModuleMatrix.Count;
-            var perModule = Math.Max(2, (int)Math.Round(PixelSize / modules));
-
-            var dark = ToRgba(SelectedForeground?.Color ?? Colors.Black);
-            var light = ToRgba(SelectedBackground?.Color ?? Colors.White);
-
-            using var pngCode = new PngByteQRCode(data);
-            var bytes = pngCode.GetGraphic(perModule, dark, light, drawQuietZones: true);
-            PngBytes = bytes;
-
-            using var stream = new MemoryStream(bytes);
-            QrImage = new Bitmap(stream);
-
-            StatusMessage = "生成成功，可复制或保存为 PNG";
-            StatusIsError = false;
-        }
-        catch (Exception ex)
+    /// <summary>停止后台工作并释放当前位图。</summary>
+    public void Dispose()
+    {
+        if (_disposed)
         {
-            PngBytes = null;
-            QrImage = null;
-            StatusIsError = true;
-            StatusMessage = ex.GetType().Name.Contains("TooLong", StringComparison.Ordinal)
-                ? "内容过长，无法生成。请缩短文本或改用更低的容错级别。"
-                : $"生成失败：{ex.Message}";
+            return;
         }
+
+        _disposed = true;
+        _debounceTimer.Stop();
+
+        var cts = _generationCts;
+        _generationCts = null;
+        cts?.Cancel();
+        cts?.Dispose();
+
+        var image = _qrImage;
+        _qrImage = null;
+        image?.Dispose();
+    }
+
+    private void ClearRender()
+    {
+        _hasRender = false;
+        QrImage = null;
+    }
+
+    private static RenderResult BuildRender(
+        string text,
+        QRCodeGenerator.ECCLevel ecc,
+        double targetSize,
+        Color darkColor,
+        Color lightColor,
+        CancellationToken cancellationToken)
+    {
+        using var generator = new QRCodeGenerator();
+        using var data = generator.CreateQrCode(text, ecc, forceUtf8: true, utf8BOM: false);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // ModuleMatrix 已包含 4 个模块宽的静默区，保证扫码器可识别。
+        var pixelsPerModule = QrRaster.GetPixelsPerModule(data.ModuleMatrix.Count, targetSize);
+        var pixels = QrRaster.BuildBgraPixels(data, pixelsPerModule, darkColor, lightColor, cancellationToken);
+
+        return new RenderResult(pixels, pixelsPerModule * data.ModuleMatrix.Count, pixelsPerModule);
+    }
+
+    private static Bitmap CreateBitmap(byte[] pixels, int size)
+    {
+        var bitmap = new WriteableBitmap(
+            new PixelSize(size, size),
+            new Vector(96, 96),
+            PixelFormat.Bgra8888,
+            AlphaFormat.Premul);
+
+        using (var buffer = bitmap.Lock())
+        {
+            var rowBytes = size * 4;
+
+            for (var y = 0; y < size; y++)
+            {
+                Marshal.Copy(pixels, y * rowBytes, buffer.Address + (y * buffer.RowBytes), rowBytes);
+            }
+        }
+
+        return bitmap;
     }
 
     /// <summary>把 Avalonia 颜色转换为 QRCoder 需要的 RGBA 字节数组。</summary>
     private static byte[] ToRgba(Color color) => [color.R, color.G, color.B, color.A];
+
+    private readonly record struct RenderResult(byte[] Pixels, int Size, int PixelsPerModule);
 }

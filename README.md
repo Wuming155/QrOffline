@@ -55,39 +55,66 @@ dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
 
 The output lands in `bin/Release/net10.0/win-x64/publish/`.
 
+When a `RuntimeIdentifier` is supplied in a Release publish, trimming (`TrimMode=partial`), single-file compression and embedded-symbol settings are enabled automatically to shrink the output and speed up startup. Plain `dotnet build` / `dotnet run` are unaffected.
+
+## Tests
+
+```bash
+dotnet test tests/QrOffline.Tests/QrOffline.Tests.csproj
+```
+
+The suite covers module rasterization (sizing, quiet zone, transparency, cancellation), verifies the `DataTooLongException` behaviour the view model relies on, and checks that every UI string has a Simplified Chinese translation. CI runs the same suite on every push and pull request (`.github/workflows/ci.yml`).
+
 ## Project structure
 
 ```
 QrOffline/
-├─ Program.cs                 # Entry point, AppBuilder configuration
-├─ App.axaml(.cs)             # Application styles and main window wiring
-├─ ViewLocator.cs             # ViewModel -> View mapping (from the template)
-├─ app.manifest               # Windows manifest
+├─ Program.cs                    # Entry point, AppBuilder configuration
+├─ App.axaml(.cs)                # Application styles and main window wiring
+├─ app.manifest                  # Windows manifest
 ├─ Assets/
-│  ├─ app-icon.ico            # Multi-size app icon (window + executable)
-│  └─ app-icon.png            # Bitmap used for the icon preview
+│  ├─ app-icon.ico               # Multi-size app icon (window + executable)
+│  └─ app-icon.png               # Bitmap used for the icon preview
+├─ Localization/
+│  ├─ Strings.resx               # UI strings, neutral (English)
+│  ├─ Strings.zh-Hans.resx       # UI strings, Simplified Chinese
+│  └─ Strings.cs                 # Strongly typed accessors
+├─ Rendering/
+│  └─ QrRaster.cs                # Module matrix -> BGRA pixels (pure, testable)
 ├─ ViewModels/
-│  ├─ MainViewModel.cs        # QR generation logic, options and state
+│  ├─ MainViewModel.cs           # Async QR generation, options and state
 │  └─ ViewModelBase.cs
-└─ Views/
-   ├─ MainWindow.axaml        # Layout and styles
-   └─ MainWindow.axaml.cs     # Clipboard copy, PNG export
+├─ Views/
+│  ├─ MainWindow.axaml           # Layout and styles
+│  └─ MainWindow.axaml.cs        # Clipboard copy, PNG export
+├─ tests/
+│  └─ QrOffline.Tests/           # xUnit tests for rasterization and localization
+└─ .github/workflows/ci.yml      # Build + test on push / PR
 ```
 
 ## Implementation notes
 
-**Managed rendering only, no `System.Drawing`.** QRCoder's `PngByteQRCode` emits a PNG byte array which Avalonia's `Bitmap` decodes, so behaviour is identical on Windows, Linux and macOS:
+**Managed rendering only, no `System.Drawing`, no PNG round-trip.** The preview is rasterized straight from QRCoder's module matrix into a `WriteableBitmap` (`Rendering/QrRaster.cs`), so the old "encode to PNG, then decode back into a `Bitmap`" step is gone from the live path. PNG compression only happens when you actually save:
 
 ```csharp
-using var pngCode = new PngByteQRCode(data);
-var bytes = pngCode.GetGraphic(perModule, dark, light, drawQuietZones: true);
-using var stream = new MemoryStream(bytes);
-QrImage = new Bitmap(stream);
+// live preview: module matrix -> BGRA pixels
+var pixels = QrRaster.BuildBgraPixels(data, pixelsPerModule, dark, light, token);
+QrImage = CreateBitmap(pixels, size);
+
+// only on save
+using var png = new PngByteQRCode(data);
+return png.GetGraphic(pixelsPerModule, darkRgba, lightRgba, drawQuietZones: true);
 ```
 
-**Quiet zone and module alignment.** `QRCodeData.ModuleMatrix` already contains the 4-module quiet zone that scanners require. `pixelsPerModule` is derived by dividing the requested size by the total module count, so the rendered resolution is always an exact multiple of the module size and the code stays crisp when scaled up.
+**Off the UI thread, and cancellable.** Encoding and rasterizing run on the thread pool (`Task.Run`) with a `CancellationTokenSource`; a newer edit cancels the in-flight work, and only the final bitmap assignment touches the UI thread. The 260 ms debounce still throttles bursts of typing.
 
-**Bitmap lifetime.** When the preview image is replaced, the previous instance is disposed one frame later via `Dispatcher.UIThread.Post(..., DispatcherPriority.Background)`, so the render pipeline is never left holding a disposed bitmap.
+**Quiet zone and module alignment.** `QRCodeData.ModuleMatrix` already contains the 4-module quiet zone that scanners require. `pixelsPerModule` is derived by dividing the requested size by the total module count, so the rendered resolution is always an exact multiple of the module size and the code stays crisp when scaled up. The preview uses `HighQuality` interpolation so downscaling into the card does not alias.
+
+**Typed error handling.** Content that exceeds capacity is caught as `QRCoder.Exceptions.DataTooLongException` and reported in the status line, instead of matching on the exception type name as a string.
+
+**Bitmap lifetime.** When the preview image is replaced, the previous instance is disposed one frame later via `Dispatcher.UIThread.Post(..., DispatcherPriority.Background)`, so the render pipeline is never left holding a disposed bitmap. The view model is `IDisposable` and the window disposes it on close.
+
+**Localization.** All user-facing text lives in `Localization/Strings.resx` (English, neutral) and `Strings.zh-Hans.resx` (Simplified Chinese). The `Strings` class exposes strongly typed accessors used from both code and XAML (`{x:Static loc:Strings.*}`), and the language follows the OS UI culture.
 
 **Avalonia 12 adaptations.** Clipboard access goes through the new `ClipboardExtensions.SetBitmapAsync`; `TextBox.Watermark` is now `PlaceholderText`; file dialogs use `IStorageProvider`; compiled bindings are enabled by default, so `x:DataType` is declared explicitly in XAML.
 

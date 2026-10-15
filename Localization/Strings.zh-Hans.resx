@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="AppTitle" xml:space="preserve">
+    <value>离线二维码生成器</value>
+  </data>
+  <data name="AppSubtitle" xml:space="preserve">
+    <value>纯本地运算 · 无需联网 · 内容不外传</value>
+  </data>
+
+  <data name="InputHeader" xml:space="preserve">
+    <value>输入内容</value>
+  </data>
+  <data name="InputHint" xml:space="preserve">
+    <value>支持文本、网址、联系方式等任意字符串，编辑时自动重新生成。</value>
+  </data>
+  <data name="InputPlaceholder" xml:space="preserve">
+    <value>在此输入文本或链接，例如 https://example.com</value>
+  </data>
+  <data name="FillSampleButton" xml:space="preserve">
+    <value>填入示例</value>
+  </data>
+  <data name="EccLabel" xml:space="preserve">
+    <value>容错级别</value>
+  </data>
+  <data name="ForegroundLabel" xml:space="preserve">
+    <value>前景色</value>
+  </data>
+  <data name="BackgroundLabel" xml:space="preserve">
+    <value>背景色</value>
+  </data>
+  <data name="OutputSizeLabel" xml:space="preserve">
+    <value>输出尺寸</value>
+  </data>
+  <data name="GenerateButton" xml:space="preserve">
+    <value>生成二维码</value>
+  </data>
+  <data name="ClearButton" xml:space="preserve">
+    <value>清空</value>
+  </data>
+
+  <data name="PreviewHeader" xml:space="preserve">
+    <value>预览</value>
+  </data>
+  <data name="PreviewEmpty" xml:space="preserve">
+    <value>输入内容后即可生成二维码</value>
+  </data>
+  <data name="CopyImageButton" xml:space="preserve">
+    <value>复制图片</value>
+  </data>
+  <data name="SavePngButton" xml:space="preserve">
+    <value>保存 PNG</value>
+  </data>
+
+  <data name="EccLowName" xml:space="preserve">
+    <value>L · 低</value>
+  </data>
+  <data name="EccLowDescription" xml:space="preserve">
+    <value>约 7% 容错，可容纳数据最多</value>
+  </data>
+  <data name="EccMediumName" xml:space="preserve">
+    <value>M · 中</value>
+  </data>
+  <data name="EccMediumDescription" xml:space="preserve">
+    <value>约 15% 容错，日常推荐</value>
+  </data>
+  <data name="EccQuartileName" xml:space="preserve">
+    <value>Q · 较高</value>
+  </data>
+  <data name="EccQuartileDescription" xml:space="preserve">
+    <value>约 25% 容错，适合轻微污损场景</value>
+  </data>
+  <data name="EccHighName" xml:space="preserve">
+    <value>H · 高</value>
+  </data>
+  <data name="EccHighDescription" xml:space="preserve">
+    <value>约 30% 容错，最抗损，适合印刷</value>
+  </data>
+
+  <data name="ColorGraphite" xml:space="preserve">
+    <value>石墨黑</value>
+  </data>
+  <data name="ColorIndigo" xml:space="preserve">
+    <value>深靛蓝</value>
+  </data>
+  <data name="ColorPine" xml:space="preserve">
+    <value>松墨绿</value>
+  </data>
+  <data name="ColorCarmine" xml:space="preserve">
+    <value>胭脂红</value>
+  </data>
+  <data name="ColorCoffee" xml:space="preserve">
+    <value>咖褐</value>
+  </data>
+  <data name="ColorWhite" xml:space="preserve">
+    <value>纯白</value>
+  </data>
+  <data name="ColorCream" xml:space="preserve">
+    <value>米白</value>
+  </data>
+  <data name="ColorLightGray" xml:space="preserve">
+    <value>浅灰</value>
+  </data>
+  <data name="ColorTransparent" xml:space="preserve">
+    <value>透明</value>
+  </data>
+
+  <data name="SampleText" xml:space="preserve">
+    <value>离线二维码生成器 · QrOffline · 无需联网</value>
+  </data>
+
+  <data name="StatusWaiting" xml:space="preserve">
+    <value>等待输入内容</value>
+  </data>
+  <data name="StatusReady" xml:space="preserve">
+    <value>生成成功，可复制或保存为 PNG</value>
+  </data>
+  <data name="StatusTooLong" xml:space="preserve">
+    <value>内容过长，无法生成。请缩短文本或改用更低的容错级别。</value>
+  </data>
+  <data name="StatusGenerationFailed" xml:space="preserve">
+    <value>生成失败：{0}</value>
+  </data>
+  <data name="StatusCopied" xml:space="preserve">
+    <value>二维码图片已复制到剪贴板</value>
+  </data>
+  <data name="StatusCopyFailed" xml:space="preserve">
+    <value>复制失败：{0}</value>
+  </data>
+  <data name="StatusSaved" xml:space="preserve">
+    <value>已保存：{0}</value>
+  </data>
+  <data name="StatusSaveFailed" xml:space="preserve">
+    <value>保存失败：{0}</value>
+  </data>
+  <data name="StatusNothingToSave" xml:space="preserve">
+    <value>没有可保存的二维码</value>
+  </data>
+
+  <data name="CharCountFormat" xml:space="preserve">
+    <value>{0} 个字符</value>
+  </data>
+  <data name="PixelSizeFormat" xml:space="preserve">
+    <value>{0} px</value>
+  </data>
+
+  <data name="SaveDialogTitle" xml:space="preserve">
+    <value>保存二维码</value>
+  </data>
+  <data name="PngFileTypeName" xml:space="preserve">
+    <value>PNG 图片</value>
+  </data>
+  <data name="SuggestedFileName" xml:space="preserve">
+    <value>qrcode.png</value>
+  </data>
+</root>

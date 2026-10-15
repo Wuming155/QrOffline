@@ -1,8 +1,10 @@
 using System;
+using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using QrOffline.Localization;
 using QrOffline.ViewModels;
 
 namespace QrOffline.Views;
@@ -31,12 +33,12 @@ public partial class MainWindow : Window
         try
         {
             await clipboard.SetBitmapAsync(bitmap);
-            viewModel.StatusMessage = "二维码图片已复制到剪贴板";
+            viewModel.StatusMessage = Strings.StatusCopied;
             viewModel.StatusIsError = false;
         }
         catch (Exception ex)
         {
-            viewModel.StatusMessage = $"复制失败：{ex.Message}";
+            viewModel.StatusMessage = string.Format(CultureInfo.CurrentCulture, Strings.StatusCopyFailed, ex.Message);
             viewModel.StatusIsError = true;
         }
     }
@@ -45,10 +47,9 @@ public partial class MainWindow : Window
     private async void OnSavePngClick(object? sender, RoutedEventArgs e)
     {
         var viewModel = ViewModel;
-        var bytes = viewModel?.PngBytes;
         var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
 
-        if (viewModel is null || bytes is null || storage is null)
+        if (viewModel is null || storage is null)
         {
             return;
         }
@@ -57,13 +58,13 @@ public partial class MainWindow : Window
         {
             var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "保存二维码",
-                SuggestedFileName = "qrcode.png",
+                Title = Strings.SaveDialogTitle,
+                SuggestedFileName = Strings.SuggestedFileName,
                 DefaultExtension = "png",
                 ShowOverwritePrompt = true,
                 FileTypeChoices =
                 [
-                    new FilePickerFileType("PNG 图片") { Patterns = ["*.png"] },
+                    new FilePickerFileType(Strings.PngFileTypeName) { Patterns = ["*.png"] },
                 ],
             });
 
@@ -72,18 +73,32 @@ public partial class MainWindow : Window
                 return;
             }
 
+            var bytes = await viewModel.EncodePngAsync();
+            if (bytes is null)
+            {
+                viewModel.StatusMessage = Strings.StatusNothingToSave;
+                viewModel.StatusIsError = true;
+                return;
+            }
+
             await using (var stream = await file.OpenWriteAsync())
             {
                 await stream.WriteAsync(bytes);
             }
 
-            viewModel.StatusMessage = $"已保存：{file.Name}";
+            viewModel.StatusMessage = string.Format(CultureInfo.CurrentCulture, Strings.StatusSaved, file.Name);
             viewModel.StatusIsError = false;
         }
         catch (Exception ex)
         {
-            viewModel.StatusMessage = $"保存失败：{ex.Message}";
+            viewModel.StatusMessage = string.Format(CultureInfo.CurrentCulture, Strings.StatusSaveFailed, ex.Message);
             viewModel.StatusIsError = true;
         }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        ViewModel?.Dispose();
+        base.OnClosed(e);
     }
 }

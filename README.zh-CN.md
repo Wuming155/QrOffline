@@ -55,39 +55,66 @@ dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
 
 产物位于 `bin/Release/net10.0/win-x64/publish/`。
 
+在 Release 发布时指定 `RuntimeIdentifier` 会自动启用裁剪（`TrimMode=partial`）、单文件压缩与嵌入符号设置，以缩小体积、加快启动；普通的 `dotnet build` / `dotnet run` 不受影响。
+
+## 测试
+
+```bash
+dotnet test tests/QrOffline.Tests/QrOffline.Tests.csproj
+```
+
+测试覆盖模块栅格化（尺寸、静默区、透明背景、取消），验证 MainViewModel 依赖的 `DataTooLongException` 行为，并检查每一条界面文案都有对应的简体中文翻译。CI 会在每次 push 与 PR 时运行同一套测试（`.github/workflows/ci.yml`）。
+
 ## 项目结构
 
 ```
 QrOffline/
-├─ Program.cs                 # 入口，AppBuilder 配置
-├─ App.axaml(.cs)             # 应用级样式与主窗口装配
-├─ ViewLocator.cs             # ViewModel -> View 映射（模板自带）
-├─ app.manifest               # Windows 清单
+├─ Program.cs                    # 入口，AppBuilder 配置
+├─ App.axaml(.cs)                # 应用级样式与主窗口装配
+├─ app.manifest                  # Windows 清单
 ├─ Assets/
-│  ├─ app-icon.ico            # 多尺寸应用图标（窗口 + 可执行文件）
-│  └─ app-icon.png            # 图标预览用位图
+│  ├─ app-icon.ico               # 多尺寸应用图标（窗口 + 可执行文件）
+│  └─ app-icon.png               # 图标预览用位图
+├─ Localization/
+│  ├─ Strings.resx               # 界面文案，中性资源（英文）
+│  ├─ Strings.zh-Hans.resx       # 界面文案，简体中文
+│  └─ Strings.cs                 # 强类型访问入口
+├─ Rendering/
+│  └─ QrRaster.cs                # 模块矩阵 -> BGRA 像素（纯逻辑，可测试）
 ├─ ViewModels/
-│  ├─ MainViewModel.cs        # 二维码生成逻辑、参数与状态
+│  ├─ MainViewModel.cs           # 异步二维码生成、参数与状态
 │  └─ ViewModelBase.cs
-└─ Views/
-   ├─ MainWindow.axaml        # 界面布局与样式
-   └─ MainWindow.axaml.cs     # 剪贴板复制、保存 PNG
+├─ Views/
+│  ├─ MainWindow.axaml           # 界面布局与样式
+│  └─ MainWindow.axaml.cs        # 剪贴板复制、保存 PNG
+├─ tests/
+│  └─ QrOffline.Tests/           # 栅格化与本地化的 xUnit 测试
+└─ .github/workflows/ci.yml      # push / PR 时构建并测试
 ```
 
 ## 实现要点
 
-**纯托管绘制，不依赖 `System.Drawing`。** 使用 QRCoder 的 `PngByteQRCode` 直接产出 PNG 字节流，再交给 Avalonia 的 `Bitmap` 解码显示，因此在 Windows / Linux / macOS 上行为一致：
+**纯托管绘制，不依赖 `System.Drawing`，且不再有 PNG 往返。** 预览直接从 QRCoder 的模块矩阵栅格化为 `WriteableBitmap`（`Rendering/QrRaster.cs`），因此实时路径上不再有「先编码 PNG 再解码成位图」的双重开销。PNG 压缩只在你真正保存时才进行：
 
 ```csharp
-using var pngCode = new PngByteQRCode(data);
-var bytes = pngCode.GetGraphic(perModule, dark, light, drawQuietZones: true);
-using var stream = new MemoryStream(bytes);
-QrImage = new Bitmap(stream);
+// 实时预览：模块矩阵 -> BGRA 像素
+var pixels = QrRaster.BuildBgraPixels(data, pixelsPerModule, dark, light, token);
+QrImage = CreateBitmap(pixels, size);
+
+// 仅在保存时
+using var png = new PngByteQRCode(data);
+return png.GetGraphic(pixelsPerModule, darkRgba, lightRgba, drawQuietZones: true);
 ```
 
-**静默区与模块对齐。** `QRCodeData.ModuleMatrix` 已包含 4 个模块宽的静默区，`pixelsPerModule` 由目标尺寸除以模块总数取整得到，因此输出分辨率始终是模块尺寸的整数倍，放大后边缘依然锐利。
+**在线程池上执行，且可取消。** 编码与栅格化通过 `Task.Run` 放到线程池，配合 `CancellationTokenSource`：新的编辑会取消上一轮尚未完成的工作，只有最终的位图赋值回到 UI 线程；260ms 防抖依然负责收敛连续输入。
 
-**位图回收时机。** 替换预览位图时，旧实例通过 `Dispatcher.UIThread.Post(..., DispatcherPriority.Background)` 延后一帧释放，避免渲染管线仍在使用时被提前销毁。
+**静默区与模块对齐。** `QRCodeData.ModuleMatrix` 已包含 4 个模块宽的静默区，`pixelsPerModule` 由目标尺寸除以模块总数取整得到，因此输出分辨率始终是模块尺寸的整数倍，放大后边缘依然锐利。预览使用 `HighQuality` 插值，缩放到卡片尺寸时不会产生锯齿。
+
+**按异常类型判断。** 内容超出容量时按 `QRCoder.Exceptions.DataTooLongException` 捕获并在状态栏提示，而不是靠异常类型名字符串匹配。
+
+**位图回收时机。** 替换预览位图时，旧实例通过 `Dispatcher.UIThread.Post(..., DispatcherPriority.Background)` 延后一帧释放，避免渲染管线仍在使用时被提前销毁。视图模型实现了 `IDisposable`，窗口关闭时释放。
+
+**本地化。** 所有面向用户的文案集中在 `Localization/Strings.resx`（英文，中性资源）与 `Strings.zh-Hans.resx`（简体中文）。`Strings` 提供强类型访问入口，代码与 XAML（`{x:Static loc:Strings.*}`）共用，语言跟随系统 UI 区域性。
 
 **Avalonia 12 适配。** 剪贴板使用新的 `ClipboardExtensions.SetBitmapAsync`；`TextBox.Watermark` 已更名为 `PlaceholderText`；文件对话框统一走 `IStorageProvider`；编译绑定默认开启，XAML 中显式声明 `x:DataType`。
 

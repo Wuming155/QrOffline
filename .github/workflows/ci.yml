@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore tests/QrOffline.Tests/QrOffline.Tests.csproj
+
+      - name: Build
+        run: dotnet build tests/QrOffline.Tests/QrOffline.Tests.csproj -c Release --no-restore
+
+      - name: Test
+        run: dotnet test tests/QrOffline.Tests/QrOffline.Tests.csproj -c Release --no-build

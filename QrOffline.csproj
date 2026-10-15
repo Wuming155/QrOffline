@@ -7,9 +7,26 @@
     <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <!-- 发布体积优化：仅在指定 RuntimeIdentifier 的 Release 发布时生效，普通 build/run 不受影响。
+       使用 partial 裁剪模式，只裁剪标记为可裁剪的程序集，对 Avalonia 更稳妥。 -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(RuntimeIdentifier)' != ''">
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
   <ItemGroup>
-    <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <!-- 测试工程位于仓库内，避免被主工程默认通配符重复编译。 -->
+  <ItemGroup>
+    <Compile Remove="tests\**" />
+    <EmbeddedResource Remove="tests\**" />
+    <None Remove="tests\**" />
+    <AvaloniaXaml Remove="tests\**" />
   </ItemGroup>
 
   <ItemGroup>
